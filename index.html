@@ -139,6 +139,10 @@
 /* Tablette Android / Galaxy Tab A9+ */
 @media (min-width:761px) and (max-width:1250px){
   nav.tabs{width:190px}
+  /* Rétablit les libellés masqués par la règle <= 860 px sur tablette */
+  nav.tabs .brand{display:block}
+  nav.tabs button span.label{display:inline}
+  nav.tabs button{padding:11px 14px 11px 18px;text-align:left}
   main{padding:24px 20px 50px;max-width:none}
   .grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
