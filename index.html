@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grand-Livre — Gestion de budget</title>
+<style>
+  :root{
+    --paper:#E9E4D8;
+    --paper-line:#CBC2AC;
+    --ink:#20241F;
+    --ink-soft:#5B5A4E;
+    --credit:#2F5233;
+    --credit-bg:#DEE6DA;
+    --debit:#8C2F2F;
+    --debit-bg:#EBDCD8;
+    --brass:#A8791F;
+    --brass-soft:#F1E6CE;
+    --card:#F5F2E9;
+    --shadow: 0 1px 0 rgba(32,36,31,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{display:flex;min-height:100vh;}
+
+  nav.tabs{
+    width:180px;flex-shrink:0;padding:28px 0 28px 0;
+    display:flex;flex-direction:column;gap:2px;
+    border-right:1px solid var(--paper-line);
+  }
+  nav.tabs .brand{
+    font-family:Georgia, 'Times New Roman', serif;font-weight:700;font-size:20px;
+    padding:0 20px 26px 20px;letter-spacing:0.01em;
+  }
+  nav.tabs .brand small{display:block;font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;font-weight:500;font-size:11px;color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;}
+  nav.tabs button{
+    all:unset;cursor:pointer;
+    font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;font-size:13.5px;font-weight:500;color:var(--ink-soft);
+    padding:11px 20px 11px 24px;border-left:3px solid transparent;
+    transition:all .15s ease;
+  }
+  nav.tabs button:hover{color:var(--ink);background:rgba(168,121,31,0.07);}
+  nav.tabs button.active{
+    color:var(--ink);background:var(--card);border-left:3px solid var(--brass);
+    font-weight:600;
+  }
+
+  main{flex:1;padding:36px 44px 60px 44px;max-width:980px;}
+  h1.page-title{font-family:Georgia, 'Times New Roman', serif;font-size:26px;font-weight:600;margin:0 0 4px 0;}
+  p.page-sub{color:var(--ink-soft);font-size:13.5px;margin:0 0 28px 0;}
+
+  .grid{display:grid;gap:16px;}
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:860px){.grid.cols-2,.grid.cols-3{grid-template-columns:1fr;} main{padding:24px;} nav.tabs{width:64px;} nav.tabs .brand,nav.tabs button span.label{display:none;}}
+
+  .card{
+    background:var(--card);border:1px solid var(--paper-line);border-radius:3px;
+    padding:18px 20px;box-shadow:var(--shadow);
+  }
+  .card h3{margin:0 0 2px 0;font-family:Georgia, 'Times New Roman', serif;font-size:15px;font-weight:600;}
+  .card .meta{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em;}
+  .amount{font-family:'SF Mono', Menlo, Consolas, monospace;font-variant-numeric:tabular-nums;font-size:22px;font-weight:600;margin-top:10px;}
+  .amount.pos{color:var(--credit);}
+  .amount.neg{color:var(--debit);}
+
+  .section{margin-bottom:36px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .section-head h2{font-family:Georgia, 'Times New Roman', serif;font-size:16px;font-weight:600;margin:0;}
+  .section-head .hint{font-size:12px;color:var(--ink-soft);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);
+     padding:0 10px 8px 10px;border-bottom:1px solid var(--paper-line);}
+  td{padding:9px 10px;border-bottom:1px solid var(--paper-line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  td.num{font-family:'SF Mono', Menlo, Consolas, monospace;font-variant-numeric:tabular-nums;text-align:right;}
+  td.num.pos{color:var(--credit);}
+  td.num.neg{color:var(--debit);}
+  .tag{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;
+       padding:2px 7px;border-radius:2px;}
+  .tag.FIXE{background:var(--brass-soft);color:var(--brass);}
+  .tag.VARIABLE{background:var(--debit-bg);color:var(--debit);}
+  .tag.REVENU{background:var(--credit-bg);color:var(--credit);}
+
+  form.inline{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    background:var(--card);border:1px solid var(--paper-line);border-radius:3px;padding:18px 20px;align-items:end;}
+  form.inline .field{display:flex;flex-direction:column;gap:5px;}
+  form.inline label{font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;}
+  input,select{
+    font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;font-size:13.5px;padding:8px 9px;border:1px solid var(--paper-line);
+    border-radius:2px;background:#FFFDF8;color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--brass);outline-offset:1px;}
+  button.btn{
+    all:unset;cursor:pointer;font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;font-weight:600;font-size:13px;
+    padding:9px 16px;border-radius:2px;text-align:center;
+  }
+  button.btn.primary{background:var(--ink);color:var(--paper);}
+  button.btn.primary:hover{background:#3b4137;}
+  button.btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--paper-line);}
+  button.btn.ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  button.btn.danger{background:transparent;color:var(--debit);font-size:12px;padding:4px 8px;}
+  button.btn.danger:hover{text-decoration:underline;}
+  button.btn.small{padding:5px 10px;font-size:12px;}
+
+  .empty{padding:30px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;
+    background:var(--card);border:1px dashed var(--paper-line);border-radius:3px;}
+
+  .rule{height:1px;background:var(--paper-line);margin:30px 0;}
+  .toast{position:fixed;bottom:22px;right:26px;background:var(--ink);color:var(--paper);padding:10px 16px;
+    border-radius:3px;font-size:12.5px;opacity:0;transform:translateY(6px);transition:all .25s ease;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .status-auto{font-size:11px;font-weight:600;padding:3px 7px;border-radius:2px;background:var(--credit-bg);color:var(--credit);}
+  .status-manual{font-size:11px;font-weight:600;padding:3px 7px;border-radius:2px;background:var(--paper);color:var(--ink-soft);border:1px solid var(--paper-line);}
+  .notice{padding:12px 14px;background:var(--brass-soft);border:1px solid #d7c497;border-radius:3px;font-size:13px;color:var(--ink);margin-bottom:18px;}
+  .muted{color:var(--ink-soft);font-size:12px;}
+  .backup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  input[type=checkbox]{width:auto;accent-color:var(--ink);}
+  .checkline{display:flex;align-items:center;gap:7px;min-height:36px;}
+</style>
+
+<style>
+.profile-box{padding:0 14px 18px;border-bottom:1px solid var(--paper-line);margin-bottom:10px}
+.profile-box label{display:block;font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700}
+.profile-box select{width:100%;font-size:12px;padding:7px 8px;border:1px solid var(--paper-line);border-radius:4px;background:var(--card);color:var(--ink)}
+.profile-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.profile-actions button{border:1px solid var(--paper-line);background:var(--card);color:var(--ink-soft);border-radius:5px;padding:5px;cursor:pointer;font-size:13px}
+.profile-actions button:hover{color:var(--ink);border-color:var(--ink-soft)}
+.profile-current{display:inline-block;font-size:11px;color:var(--ink-soft);margin-left:8px;font-weight:500}
+.profile-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:999;padding:18px}
+.profile-modal{width:min(420px,100%);background:var(--card);border:1px solid var(--paper-line);border-radius:10px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.profile-modal h3{margin:0 0 12px;font-family:Georgia,serif}
+.profile-modal input{width:100%;font-size:15px;padding:10px;border:1px solid var(--paper-line);border-radius:5px;background:white}
+.profile-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+/* Tablette Android / Galaxy Tab A9+ */
+@media (min-width:761px) and (max-width:1250px){
+  nav.tabs{width:190px}
+  main{padding:24px 20px 50px;max-width:none}
+  .grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  form.inline{grid-template-columns:repeat(2,minmax(180px,1fr))}
+  table{font-size:12px}
+  th,td{padding:7px 8px}
+}
+
+/* Portrait téléphone / petite tablette */
+@media (max-width:760px){
+  body{padding-bottom:74px}
+  .app{display:block}
+  nav.tabs{
+    position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:68px;
+    padding:0 4px env(safe-area-inset-bottom,0px);display:flex;flex-direction:row;
+    border-right:0;border-top:1px solid var(--paper-line);z-index:100;
+    background:rgba(239,235,225,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)
+  }
+  nav.tabs .brand,.profile-box{display:none}
+  nav.tabs button{flex:1;padding:7px 2px;border-left:0;border-top:3px solid transparent;text-align:center;font-size:9.5px;display:flex;align-items:center;justify-content:center}
+  nav.tabs button.active{border-left:0;border-top:3px solid var(--ink)}
+  main{padding:18px 10px 92px;max-width:none;overflow-x:hidden}
+  .page-title{font-size:22px}
+  .grid.cols-2,.grid.cols-3{grid-template-columns:1fr}
+  form.inline{grid-template-columns:1fr;padding:12px}
+  input,select{font-size:16px;min-height:42px}
+  .backup-actions{display:grid;grid-template-columns:1fr}
+  .backup-actions .btn{width:100%}
+  table,thead,tbody,tr,th,td{display:block;width:100%}
+  thead{display:none}
+  tbody tr{background:var(--card);border:1px solid var(--paper-line);border-radius:8px;padding:10px;margin-bottom:10px}
+  tbody td{border:0;border-bottom:1px solid var(--paper-line);padding:7px 0}
+  tbody td:last-child{border-bottom:0}
+  .profile-mobile{
+    display:flex;align-items:center;gap:6px;margin-bottom:14px;padding:9px 10px;background:var(--card);
+    border:1px solid var(--paper-line);border-radius:8px
+  }
+  .profile-mobile select{flex:1}
+}
+@media (min-width:761px){.profile-mobile{display:none}}
+</style>
+
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#E9E4D8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body>
+<div class="app">
+  <nav class="tabs" id="tabs">
+    <div class="brand">Grand-Livre<small>Gestion de budget</small></div>
+
+    <div class="profile-box">
+      <label for="profile-select">Profil</label>
+      <select id="profile-select"></select>
+      <div class="profile-actions">
+        <button type="button" id="profile-add" title="Ajouter un profil">+</button>
+        <button type="button" id="profile-rename" title="Renommer le profil">✎</button>
+        <button type="button" id="profile-delete" title="Supprimer le profil">−</button>
+      </div>
+    </div>
+
+    <button data-tab="dashboard"><span class="label">Tableau de bord</span></button>
+    <button data-tab="operations"><span class="label">Opérations</span></button>
+    <button data-tab="charges"><span class="label">Charges fixes</span></button>
+    <button data-tab="comptes"><span class="label">Comptes</span></button>
+    <button data-tab="categories"><span class="label">Catégories</span></button>
+    <button data-tab="backup"><span class="label">Sauvegarde</span></button>
+  </nav>
+  <main id="content"></main>
+</div>
+<div class="toast" id="toast"></div>
+<div id="profile-modal-root"></div>
+<input type="file" id="restore-file" accept="application/json,.json" style="display:none">
+
+<script>
+const LEGACY_STORAGE_KEY = 'grand-livre:data';
+const PROFILES_KEY = 'grand-livre:profiles:v1';
+const PROFILE_PREFIX = 'grand-livre:profile:';
+const DATA_VERSION = 7;
+let profiles = [];
+let activeProfileId = '';
+let state = { accounts: [], archivedAccounts: [], categories: [], transactions: [], fixedCharges: [], settings: {autoFixed:true} };
+let activeTab = 'dashboard';
+let saveTimer = null;
+let editing = { tx:null, fixed:null, acc:null, cat:null, transfer:null };
+
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+function defaultCategories(){
+  return [
+    {id:uid(), name:'LOYER', type:'FIXE'},
+    {id:uid(), name:'ASSURANCE MALADIE', type:'FIXE'},
+    {id:uid(), name:'ASSURANCE MENAGE', type:'FIXE'},
+    {id:uid(), name:'TAXES / IMPOTS', type:'FIXE'},
+    {id:uid(), name:'DEPENSES PERSONNELLES', type:'VARIABLE'},
+    {id:uid(), name:'DAB', type:'VARIABLE'},
+    {id:uid(), name:'MEDECIN', type:'VARIABLE'},
+    {id:uid(), name:'COURSES', type:'VARIABLE'},
+    {id:uid(), name:'EPARGNE', type:'VARIABLE'},
+    {id:uid(), name:'SALAIRE', type:'REVENU'},
+  ];
+}
+
+function normalizeState(data){
+  const s = (data && typeof data==='object') ? data : {};
+  s.accounts = Array.isArray(s.accounts) ? s.accounts : [];
+  s.archivedAccounts = Array.isArray(s.archivedAccounts) ? s.archivedAccounts : [];
+  s.categories = Array.isArray(s.categories) ? s.categories : [];
+  s.transactions = Array.isArray(s.transactions) ? s.transactions : [];
+  s.fixedCharges = Array.isArray(s.fixedCharges) ? s.fixedCharges : [];
+  s.settings = s.settings && typeof s.settings==='object' ? s.settings : {autoFixed:true};
+  if(typeof s.settings.autoFixed!=='boolean') s.settings.autoFixed = true;
+  s.accounts.forEach(a=>{
+    a.initialBalance = Number(a.initialBalance)||0;
+    a.currency = String(a.currency||'CHF').toUpperCase();
+  });
+  s.transactions.forEach(t=>{
+    t.montant = Number(t.montant)||0;
+    if(typeof t.bankValidated!=='boolean') t.bankValidated = false;
+    if(!t.bankValidatedDate) t.bankValidatedDate = '';
+    if(!t.transferId) t.transferId = '';
+    if(!t.transferRole) t.transferRole = '';
+  });
+  s.fixedCharges.forEach(f=>{
+    f.montant = Number(f.montant)||0;
+    f.jour = Math.max(1, Math.min(31, Number(f.jour)||1));
+    f.mois = Math.max(1, Math.min(12, Number(f.mois)||1));
+    f.frequence = f.frequence==='ANNUELLE' ? 'ANNUELLE' : 'MENSUELLE';
+    f.mode = f.mode || (f.sens==='CREDIT' ? 'VIREMENT' : 'PRELEVEMENT');
+    // Migration prudente : les anciennes charges restent manuelles jusqu'à activation par l'utilisateur.
+    if(typeof f.automatique!=='boolean') f.automatique = false;
+    if(!f.createdDate) f.createdDate = todayISO();
+  });
+  s.version = DATA_VERSION;
+  return s;
+}
+
+function emptyProfileState(){
+  return normalizeState({categories:defaultCategories()});
+}
+
+function readProfilesMeta(){
+  try{
+    const p=JSON.parse(localStorage.getItem(PROFILES_KEY)||'null');
+    if(p && Array.isArray(p.profiles) && p.profiles.length){
+      profiles=p.profiles;
+      activeProfileId=p.activeProfileId && p.profiles.some(x=>x.id===p.activeProfileId) ? p.activeProfileId : p.profiles[0].id;
+      return;
+    }
+  }catch(e){}
+
+  // Migration automatique de l'ancienne version mono-profil.
+  let legacy=null;
+  try{ legacy=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||'null'); }catch(e){}
+  const id='profil-'+uid();
+  profiles=[{id,name:'Profil principal'}];
+  activeProfileId=id;
+  localStorage.setItem(PROFILES_KEY,JSON.stringify({profiles,activeProfileId}));
+  localStorage.setItem(PROFILE_PREFIX+id,JSON.stringify(legacy ? normalizeState(legacy) : emptyProfileState()));
+}
+
+function saveProfilesMeta(){
+  localStorage.setItem(PROFILES_KEY,JSON.stringify({profiles,activeProfileId}));
+}
+
+function profileById(id){ return profiles.find(p=>p.id===id); }
+function currentProfile(){ return profileById(activeProfileId); }
+
+function loadActiveProfile(){
+  let data=null;
+  try{ data=JSON.parse(localStorage.getItem(PROFILE_PREFIX+activeProfileId)||'null'); }catch(e){}
+  state=normalizeState(data || {categories:defaultCategories()});
+}
+
+function persistCurrentProfile(showToast=true){
+  try{
+    localStorage.setItem(PROFILE_PREFIX+activeProfileId,JSON.stringify(state));
+    saveProfilesMeta();
+    if(showToast) toast('Enregistré');
+    return true;
+  }catch(e){
+    if(showToast) toast('Échec de la sauvegarde');
+    return false;
+  }
+}
+
+function load(){
+  readProfilesMeta();
+  loadActiveProfile();
+  refreshProfileSelectors();
+  const count=processDueFixedCharges();
+  persistCurrentProfile(false);
+  render();
+  if(count) setTimeout(()=>toast(`${count} écriture${count>1?'s':''} automatique${count>1?'s':''} ajoutée${count>1?'s':''}`),200);
+}
+
+function persistNow(showToast=true){
+  return persistCurrentProfile(showToast);
+}
+
+function refreshProfileSelectors(){
+  const options=profiles.map(p=>`<option value="${p.id}" ${p.id===activeProfileId?'selected':''}>${esc(p.name)}</option>`).join('');
+  const s=document.getElementById('profile-select');
+  if(s) s.innerHTML=options;
+  const ms=document.getElementById('profile-mobile-select');
+  if(ms) ms.innerHTML=options;
+}
+
+function switchProfile(id){
+  if(!profiles.some(p=>p.id===id) || id===activeProfileId) return;
+  persistCurrentProfile(false);
+  activeProfileId=id;
+  saveProfilesMeta();
+  loadActiveProfile();
+  editing={tx:null,fixed:null,acc:null,cat:null,transfer:null};
+  activeTab='dashboard';
+  processDueFixedCharges();
+  persistCurrentProfile(false);
+  refreshProfileSelectors();
+  render();
+  toast(`Profil : ${currentProfile()?.name||''}`);
+}
+
+function openProfileNameModal(mode){
+  const current=currentProfile();
+  const isRename=mode==='rename';
+  const root=document.getElementById('profile-modal-root');
+  root.innerHTML=`<div class="profile-modal-overlay"><div class="profile-modal">
+    <h3>${isRename?'Renommer le profil':'Nouveau profil'}</h3>
+    <input id="profile-name-input" maxlength="50" value="${isRename?esc(current?.name||''):''}" placeholder="Nom du profil">
+    <div class="profile-modal-actions">
+      <button class="btn ghost" id="profile-modal-cancel">Annuler</button>
+      <button class="btn primary" id="profile-modal-save">${isRename?'Renommer':'Créer'}</button>
+    </div>
+  </div></div>`;
+  const input=document.getElementById('profile-name-input');
+  setTimeout(()=>{input.focus();input.select();},0);
+  document.getElementById('profile-modal-cancel').onclick=()=>root.innerHTML='';
+  document.getElementById('profile-modal-save').onclick=()=>{
+    const name=input.value.trim();
+    if(!name) return;
+    if(isRename){
+      current.name=name;
+      saveProfilesMeta();
+      root.innerHTML='';
+      refreshProfileSelectors();
+      render();
+      toast('Profil renommé');
+    }else{
+      persistCurrentProfile(false);
+      const id='profil-'+uid();
+      profiles.push({id,name});
+      activeProfileId=id;
+      state=emptyProfileState();
+      persistCurrentProfile(false);
+      saveProfilesMeta();
+      root.innerHTML='';
+      refreshProfileSelectors();
+      editing={tx:null,fixed:null,acc:null,cat:null,transfer:null};
+      activeTab='dashboard';
+      render();
+      toast('Profil créé');
+    }
+  };
+}
+
+function deleteCurrentProfile(){
+  if(profiles.length<=1){ toast('Il faut conserver au moins un profil'); return; }
+  const p=currentProfile();
+  const root=document.getElementById('profile-modal-root');
+  root.innerHTML=`<div class="profile-modal-overlay"><div class="profile-modal">
+    <h3>Supprimer le profil ?</h3>
+    <p style="color:var(--ink-soft);font-size:13px;line-height:1.45;margin:0 0 14px">
+      Le profil <strong>${esc(p.name)}</strong> et toutes ses données seront supprimés définitivement.
+    </p>
+    <div class="profile-modal-actions">
+      <button class="btn ghost" id="profile-delete-cancel">Annuler</button>
+      <button class="btn danger" id="profile-delete-confirm">Supprimer définitivement</button>
+    </div>
+  </div></div>`;
+  document.getElementById('profile-delete-cancel').onclick=()=>root.innerHTML='';
+  document.getElementById('profile-delete-confirm').onclick=()=>{
+    const oldId=activeProfileId;
+    profiles=profiles.filter(x=>x.id!==oldId);
+    localStorage.removeItem(PROFILE_PREFIX+oldId);
+    activeProfileId=profiles[0].id;
+    saveProfilesMeta();
+    loadActiveProfile();
+    refreshProfileSelectors();
+    activeTab='dashboard';
+    editing={tx:null,fixed:null,acc:null,cat:null,transfer:null};
+    root.innerHTML='';
+    render();
+    toast('Profil supprimé');
+  };
+}
+
+function renderMobileProfile(){
+  return `<div class="profile-mobile"><strong style="font-size:11px">Profil</strong>
+    <select id="profile-mobile-select">${profiles.map(p=>`<option value="${p.id}" ${p.id===activeProfileId?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <button class="btn small ghost" data-action="profile-add-mobile" title="Ajouter">+</button>
+    <button class="btn small ghost" data-action="profile-rename-mobile" title="Renommer">✎</button>
+    <button class="btn small danger" data-action="profile-delete-mobile" title="Supprimer">−</button>
+  </div>`;
+}
+
+function persistNow(showToast=true){ return persistCurrentProfile(showToast); }
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>persistNow(true),120);
+}
+
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._timer); toast._timer=setTimeout(()=>t.classList.remove('show'),1600);
+}
+function money(n,currency='CHF'){
+  const v=Number(n)||0;
+  try{ return new Intl.NumberFormat('fr-CH',{style:'currency',currency:currency||'CHF',minimumFractionDigits:2,maximumFractionDigits:2}).format(v); }
+  catch(e){ return new Intl.NumberFormat('fr-CH',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' '+(currency||'CHF'); }
+}
+function localISODate(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayISO(){ return localISODate(); }
+function monthKey(s){ return (s||'').slice(0,7); }
+function currentMonthKey(){ return todayISO().slice(0,7); }
+function monthLabel(){ return new Date().toLocaleDateString('fr-FR',{month:'long'}); }
+function accountById(id){ return state.accounts.find(a=>a.id===id) || state.archivedAccounts.find(a=>a.id===id); }
+function activeAccountById(id){ return state.accounts.find(a=>a.id===id); }
+function categoryById(id){ return state.categories.find(c=>c.id===id); }
+function accountBalance(id){
+  const a=accountById(id); if(!a) return 0;
+  const tx=state.transactions.filter(t=>t.accountId===id).reduce((s,t)=>s+(t.sens==='CREDIT'?1:-1)*(Number(t.montant)||0),0);
+  return (Number(a.initialBalance)||0)+tx;
+}
+function accountBankBalance(id){
+  const a=accountById(id); if(!a) return 0;
+  const tx=state.transactions.filter(t=>t.accountId===id && t.bankValidated).reduce((s,t)=>s+(t.sens==='CREDIT'?1:-1)*(Number(t.montant)||0),0);
+  return (Number(a.initialBalance)||0)+tx;
+}
+function pendingBankCount(id){
+  return state.transactions.filter(t=>t.accountId===id && !t.bankValidated).length;
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(d){ if(!d)return '—'; const [y,m,j]=d.split('-'); return `${j}.${m}.${y}`; }
+function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+function dueDateFor(f, ref=new Date()){
+  const y=ref.getFullYear();
+  const m=f.frequence==='ANNUELLE' ? Number(f.mois) : ref.getMonth()+1;
+  const day=Math.min(Number(f.jour)||1, daysInMonth(y,m));
+  return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function periodKeyFor(f, dateStr){ return f.frequence==='ANNUELLE' ? (dateStr||'').slice(0,4) : (dateStr||'').slice(0,7); }
+function fixedAlreadyLogged(f,dateStr=todayISO()){
+  const p=periodKeyFor(f,dateStr);
+  return state.transactions.some(t=>t.fixedChargeId===f.id && (t.fixedPeriod===p || periodKeyFor(f,t.date)===p));
+}
+function addFixedTransaction(f,dateStr,automatic=false){
+  const p=periodKeyFor(f,dateStr);
+  if(fixedAlreadyLogged(f,dateStr)) return false;
+  state.transactions.push({
+    id:uid(), date:dateStr, accountId:f.accountId, sens:f.sens, categoryId:f.categoryId,
+    mode:f.mode||'PRELEVEMENT', libelle:f.label, montant:Number(f.montant)||0,
+    fixedChargeId:f.id, fixedPeriod:p, automatique:!!automatic, bankValidated:false, bankValidatedDate:''
+  });
+  return true;
+}
+function processDueFixedCharges(){
+  if(!state.settings.autoFixed) return 0;
+  const today=todayISO(); let count=0;
+  for(const f of state.fixedCharges){
+    if(!f.automatique) continue;
+    if(!accountById(f.accountId) || !categoryById(f.categoryId)) continue;
+    const due=dueDateFor(f);
+    if(f.frequence==='ANNUELLE' && Number(f.mois)!==new Date().getMonth()+1) continue;
+    if(due>today) continue;
+    if(f.createdDate && due<f.createdDate) continue;
+    if(addFixedTransaction(f,due,true)) count++;
+  }
+  return count;
+}
+function groupedAmounts(transactions, predicate){
+  const out={};
+  transactions.filter(predicate).forEach(t=>{
+    const a=accountById(t.accountId); const cur=a?.currency||'CHF';
+    out[cur]=(out[cur]||0)+(Number(t.montant)||0);
+  });
+  return out;
+}
+function moneyCards(grouped, className=''){
+  const entries=Object.entries(grouped);
+  if(!entries.length) return `<div class="amount ${className}">${money(0,'CHF')}</div>`;
+  return entries.map(([cur,v])=>`<div class="amount ${className}">${money(v,cur)}</div>`).join('');
+}
+
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===activeTab));
+  const main=document.getElementById('content');
+  const profileMobile=renderMobileProfile();
+  if(activeTab==='dashboard') main.innerHTML=profileMobile+renderDashboard();
+  else if(activeTab==='operations') main.innerHTML=profileMobile+renderOperations();
+  else if(activeTab==='charges') main.innerHTML=profileMobile+renderCharges();
+  else if(activeTab==='comptes') main.innerHTML=profileMobile+renderComptes();
+  else if(activeTab==='categories') main.innerHTML=profileMobile+renderCategories();
+  else if(activeTab==='backup') main.innerHTML=profileMobile+renderBackup();
+}
+
+function renderDashboard(){
+  const monthTx=state.transactions.filter(t=>monthKey(t.date)===currentMonthKey());
+  const balances={};
+  state.accounts.forEach(a=>{ balances[a.currency]=(balances[a.currency]||0)+accountBalance(a.id); });
+  const revenus=groupedAmounts(monthTx,t=>t.sens==='CREDIT' && !t.transferId);
+  const depVar=groupedAmounts(monthTx,t=>{const c=categoryById(t.categoryId); return t.sens==='DEBIT'&&c?.type==='VARIABLE';});
+  const fixes=groupedAmounts(monthTx,t=>{const c=categoryById(t.categoryId); return t.sens==='DEBIT'&&c?.type==='FIXE';});
+  const accCards=state.accounts.length?state.accounts.map(a=>{const b=accountBalance(a.id),bb=accountBankBalance(a.id),pc=pendingBankCount(a.id);return `<div class="card"><div class="meta">${esc(a.type)} · ${esc(a.currency)}</div><h3>${esc(a.name)}</h3><div class="meta" style="margin-top:10px">Solde théorique</div><div class="amount ${b>=0?'pos':'neg'}">${money(b,a.currency)}</div><div class="meta" style="margin-top:12px">Solde validé banque</div><div class="amount ${bb>=0?'pos':'neg'}" style="font-size:17px;margin-top:5px">${money(bb,a.currency)}</div>${pc?`<div class="muted" style="margin-top:8px">${pc} opération${pc>1?'s':''} en attente</div>`:''}</div>`;}).join(''):`<div class="empty">Aucun compte. Ajoutez-en un dans l'onglet Comptes.</div>`;
+  const upcoming=state.fixedCharges.slice(0,8).map(f=>{
+    const a=accountById(f.accountId), c=categoryById(f.categoryId), done=fixedAlreadyLogged(f);
+    return `<tr><td>${esc(f.label)}</td><td>${a?esc(a.name)+(a.archived?' <span class="status-manual">COMPTE SUPPRIMÉ</span>':''):'—'}</td><td>${c?`<span class="tag ${c.type}">${esc(c.name)}</span>`:'—'}</td><td>${fmtDate(dueDateFor(f))}</td><td>${f.automatique?'<span class="status-auto">AUTO</span>':'<span class="status-manual">MANUEL</span>'}</td><td class="num ${f.sens==='CREDIT'?'pos':'neg'}">${f.sens==='CREDIT'?'+':'-'}${money(f.montant,a?.currency||'CHF')}</td><td>${done?'Déjà enregistré':`<button class="btn small primary" data-action="log-fixed" data-id="${f.id}">Enregistrer</button>`}</td></tr>`;
+  }).join('');
+  return `<h1 class="page-title">Tableau de bord <span class="profile-current">${esc(currentProfile()?.name||"")}</span></h1><p class="page-sub">Vue d'ensemble de vos comptes et de vos mouvements de ${monthLabel()}.</p>
+  <div class="section"><div class="section-head"><h2>Comptes</h2></div><div class="grid cols-3">${accCards}</div></div>
+  <div class="section"><div class="section-head"><h2>Soldes par devise</h2></div><div class="grid cols-3">${Object.entries(balances).map(([cur,v])=>`<div class="card"><div class="meta">Total ${cur}</div><div class="amount ${v>=0?'pos':'neg'}">${money(v,cur)}</div></div>`).join('')||'<div class="empty">Aucun solde à afficher.</div>'}</div></div>
+  <div class="section"><div class="section-head"><h2>Ce mois-ci (${monthLabel()})</h2></div><div class="grid cols-3"><div class="card"><div class="meta">Revenus</div>${moneyCards(revenus,'pos')}</div><div class="card"><div class="meta">Dépenses variables</div>${moneyCards(depVar,'neg')}</div><div class="card"><div class="meta">Charges fixes payées</div>${moneyCards(fixes,'neg')}</div></div></div>
+  ${state.fixedCharges.length?`<div class="section"><div class="section-head"><h2>Charges fixes</h2><span class="hint">Les charges AUTO sont enregistrées à l'échéance dès que l'application est ouverte ou reprise.</span></div><table><thead><tr><th>Libellé</th><th>Compte</th><th>Catégorie</th><th>Échéance</th><th>Mode</th><th>Montant</th><th></th></tr></thead><tbody>${upcoming}</tbody></table></div>`:''}`;
+}
+
+function renderOperations(){
+  const editTx=editing.tx ? state.transactions.find(t=>t.id===editing.tx) : null;
+  const editTransfer=editing.transfer ? state.transactions.find(t=>t.transferId===editing.transfer && t.transferRole==='SOURCE') : null;
+  const editTransferDest=editing.transfer ? state.transactions.find(t=>t.transferId===editing.transfer && t.transferRole==='DEST') : null;
+  const accOptions=(selected='')=>state.accounts.map(a=>`<option value="${a.id}" ${a.id===selected?'selected':''}>${esc(a.name)} (${esc(a.currency)})</option>`).join('');
+  const catOptions=(selected='')=>state.categories.map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+  const pending=state.transactions.filter(t=>!t.bankValidated).length;
+  const rows=[...state.transactions].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{
+    const a=accountById(t.accountId), c=categoryById(t.categoryId);
+    const bank=t.bankValidated
+      ? `<span class="status-auto">VALIDÉE</span><div class="muted" style="margin-top:4px">${fmtDate(t.bankValidatedDate)}</div><button class="btn small ghost" data-action="unvalidate-bank" data-id="${t.id}" style="margin-top:5px">Annuler</button>`
+      : `<span class="status-manual">EN ATTENTE</span><br><button class="btn small primary" data-action="validate-bank" data-id="${t.id}" style="margin-top:5px">Valider banque</button>`;
+    const isTransfer=!!t.transferId;
+    const actions=isTransfer
+      ? `<button class="btn small ghost" data-action="edit-transfer" data-id="${t.transferId}">Modifier transfert</button> <button class="btn danger" data-action="del-transfer" data-id="${t.transferId}">Supprimer transfert</button>`
+      : `<button class="btn small ghost" data-action="edit-tx" data-id="${t.id}">Modifier</button> <button class="btn danger" data-action="del-tx" data-id="${t.id}">Supprimer</button>`;
+    return `<tr><td>${fmtDate(t.date)}</td><td>${a?esc(a.name):'—'}</td><td>${c?`<span class="tag ${c.type}">${esc(c.name)}</span>`:'—'}</td><td>${esc(t.mode||'')}</td><td>${esc(t.libelle||'')} ${t.automatique?'<span class="status-auto">AUTO</span>':''}${isTransfer?'<span class="status-auto">TRANSFERT</span>':''}</td><td class="num ${t.sens==='CREDIT'?'pos':'neg'}">${t.sens==='CREDIT'?'+':'-'}${money(t.montant,a?.currency||'CHF')}</td><td><span class="status-auto">ENREGISTRÉE</span></td><td>${bank}</td><td>${actions}</td></tr>`;
+  }).join('');
+
+  const txTitle=editTx?'Modifier une opération':'Ajouter une opération';
+  const txButton=editTx?'Enregistrer les modifications':"Ajouter l'opération";
+  const txCancel=editTx?'<button class="btn ghost" type="button" data-action="cancel-edit-tx">Annuler</button>':'';
+  const txDate=editTx?.date||todayISO(), txSens=editTx?.sens||'DEBIT', txMode=editTx?.mode||'CB';
+
+  const transferId=editing.transfer||'';
+  const srcAcc=editTransfer?.accountId||'', dstAcc=editTransferDest?.accountId||'';
+  const transferDate=editTransfer?.date||todayISO();
+  const transferAmount=editTransfer?.montant||'';
+  const destAmount=editTransferDest?.montant||'';
+  const transferLabel=(editTransfer?.libelle||'').replace(/^Transfert vers .*? — /,'').replace(/^Transfert vers .*$/,'');
+
+  return `<h1 class="page-title">Opérations</h1><p class="page-sub">Saisissez vos mouvements, validez-les avec votre banque et effectuez des transferts entre vos comptes. ${pending?`<strong>${pending} opération${pending>1?'s':''} en attente de validation bancaire.</strong>`:'Toutes les opérations sont rapprochées.'}</p>
+  <div class="section"><div class="section-head"><h2>${txTitle}</h2></div>
+  <form class="inline" id="form-tx">
+    <input type="hidden" name="editId" value="${editTx?.id||''}">
+    <div class="field"><label>Date</label><input type="date" name="date" value="${txDate}" required></div>
+    <div class="field"><label>Compte</label><select name="accountId" required>${accOptions(editTx?.accountId||'')}</select></div>
+    <div class="field"><label>Sens</label><select name="sens" required><option value="DEBIT" ${txSens==='DEBIT'?'selected':''}>Débit (sortie)</option><option value="CREDIT" ${txSens==='CREDIT'?'selected':''}>Crédit (entrée)</option></select></div>
+    <div class="field"><label>Catégorie</label><select name="categoryId" required>${catOptions(editTx?.categoryId||'')}</select></div>
+    <div class="field"><label>Mode</label><select name="mode"><option ${txMode==='CB'?'selected':''}>CB</option><option ${txMode==='VIREMENT'?'selected':''}>VIREMENT</option><option ${txMode==='PRELEVEMENT'?'selected':''}>PRELEVEMENT</option><option ${txMode==='DAB'?'selected':''}>DAB</option><option ${txMode==='ESPECES'?'selected':''}>ESPECES</option></select></div>
+    <div class="field"><label>Libellé</label><input name="libelle" value="${esc(editTx?.libelle||'')}" placeholder="Ex: Courses Migros"></div>
+    <div class="field"><label>Montant</label><input type="number" name="montant" step="0.01" min="0" value="${editTx?.montant??''}" required></div>
+    <div class="field"><button class="btn primary" type="submit">${txButton}</button>${txCancel}</div>
+  </form></div>
+
+  <div class="section"><div class="section-head"><h2>${editing.transfer?'Modifier le transfert':'Transfert entre comptes'}</h2><span class="hint">Crée automatiquement le débit et le crédit liés</span></div>
+  <form class="inline" id="form-transfer">
+    <input type="hidden" name="transferId" value="${transferId}">
+    <div class="field"><label>Date</label><input type="date" name="date" value="${transferDate}" required></div>
+    <div class="field"><label>Compte source</label><select name="sourceAccountId" required><option value="">Choisir…</option>${accOptions(srcAcc)}</select></div>
+    <div class="field"><label>Compte destination</label><select name="destAccountId" required><option value="">Choisir…</option>${accOptions(dstAcc)}</select></div>
+    <div class="field"><label>Montant débité</label><input type="number" name="sourceAmount" step="0.01" min="0.01" value="${transferAmount}" required></div>
+    <div class="field"><label>Montant crédité</label><input type="number" name="destAmount" step="0.01" min="0.01" value="${destAmount}" placeholder="Laisser vide si même devise"></div>
+    <div class="field"><label>Libellé complémentaire</label><input name="label" value="${esc(transferLabel)}" placeholder="Ex: Épargne mensuelle"></div>
+    <div class="field"><button class="btn primary" type="submit">${editing.transfer?'Enregistrer le transfert':'Effectuer le transfert'}</button>${editing.transfer?'<button class="btn ghost" type="button" data-action="cancel-edit-transfer">Annuler</button>':''}</div>
+  </form></div>
+
+  <div class="rule"></div><div class="section"><div class="section-head"><h2>Historique et rapprochement bancaire</h2><span class="hint">Validez une opération seulement lorsqu'elle apparaît sur votre banque</span></div>${state.transactions.length?`<table><thead><tr><th>Date</th><th>Compte</th><th>Catégorie</th><th>Mode</th><th>Libellé</th><th>Montant</th><th>Grand-Livre</th><th>Banque</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Aucune opération enregistrée.</div>'}</div>`;
+}
+
+function renderCharges(){
+  const edit=editing.fixed ? state.fixedCharges.find(f=>f.id===editing.fixed) : null;
+  const accOptions=state.accounts.map(a=>`<option value="${a.id}" ${a.id===edit?.accountId?'selected':''}>${esc(a.name)} (${esc(a.currency)})</option>`).join('');
+  const catOptions=state.categories.map(c=>`<option value="${c.id}" ${c.id===edit?.categoryId?'selected':''}>${esc(c.name)}</option>`).join('');
+  const months=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const rows=state.fixedCharges.map(f=>{const a=accountById(f.accountId),c=categoryById(f.categoryId);return `<tr><td>${esc(f.label)}</td><td>${a?esc(a.name):'—'}</td><td>${c?`<span class="tag ${c.type}">${esc(c.name)}</span>`:'—'}</td><td>${f.frequence==='ANNUELLE'?'Annuelle':'Mensuelle'}</td><td>${f.frequence==='ANNUELLE'?months[f.mois-1]+' · jour '+f.jour:'Jour '+f.jour}</td><td>${f.automatique?'<span class="status-auto">AUTO</span>':'<span class="status-manual">MANUEL</span>'}</td><td class="num ${f.sens==='CREDIT'?'pos':'neg'}">${f.sens==='CREDIT'?'+':'-'}${money(f.montant,a?.currency||'CHF')}</td><td><button class="btn small ghost" data-action="edit-fixed" data-id="${f.id}">Modifier</button> <button class="btn small ghost" data-action="toggle-auto" data-id="${f.id}">${f.automatique?'Passer en manuel':'Activer auto'}</button> <button class="btn small primary" data-action="log-fixed" data-id="${f.id}">Enregistrer</button> <button class="btn danger" data-action="del-fixed" data-id="${f.id}">Supprimer</button></td></tr>`;}).join('');
+  if(!state.accounts.length) return `<h1 class="page-title">Charges fixes</h1><p class="page-sub">Créez d'abord un compte.</p>`;
+  return `<h1 class="page-title">Charges fixes</h1><p class="page-sub">Loyer, salaires, assurances et autres mouvements récurrents.</p>
+  <form class="inline" id="form-fixed"><input type="hidden" name="editId" value="${edit?.id||''}">
+  <div class="field"><label>Libellé</label><input name="label" value="${esc(edit?.label||'')}" required></div>
+  <div class="field"><label>Compte</label><select name="accountId" required>${accOptions}</select></div>
+  <div class="field"><label>Sens</label><select name="sens"><option value="DEBIT" ${edit?.sens!=='CREDIT'?'selected':''}>Débit</option><option value="CREDIT" ${edit?.sens==='CREDIT'?'selected':''}>Crédit</option></select></div>
+  <div class="field"><label>Catégorie</label><select name="categoryId" required>${catOptions}</select></div>
+  <div class="field"><label>Mode</label><select name="mode"><option ${edit?.mode==='PRELEVEMENT'?'selected':''}>PRELEVEMENT</option><option ${edit?.mode==='VIREMENT'?'selected':''}>VIREMENT</option><option ${edit?.mode==='CB'?'selected':''}>CB</option></select></div>
+  <div class="field"><label>Fréquence</label><select name="frequence"><option value="MENSUELLE" ${edit?.frequence!=='ANNUELLE'?'selected':''}>Mensuelle</option><option value="ANNUELLE" ${edit?.frequence==='ANNUELLE'?'selected':''}>Annuelle</option></select></div>
+  <div class="field"><label>Jour d'échéance</label><input type="number" name="jour" min="1" max="31" value="${edit?.jour||1}" required></div>
+  <div class="field"><label>Mois (si annuelle)</label><select name="mois">${months.map((m,i)=>`<option value="${i+1}" ${(edit?.mois||1)===i+1?'selected':''}>${m}</option>`).join('')}</select></div>
+  <div class="field"><label>Montant</label><input type="number" name="montant" step="0.01" min="0" value="${edit?.montant??''}" required></div>
+  <div class="field"><label><input type="checkbox" name="automatique" ${edit?.automatique?'checked':''}> Enregistrement automatique</label></div>
+  <div class="field"><button class="btn primary" type="submit">${edit?'Enregistrer les modifications':'Ajouter la charge'}</button>${edit?'<button class="btn ghost" type="button" data-action="cancel-edit-fixed">Annuler</button>':''}</div></form>
+  <div class="rule"></div>${state.fixedCharges.length?`<table><thead><tr><th>Libellé</th><th>Compte</th><th>Catégorie</th><th>Fréquence</th><th>Échéance</th><th>Mode auto</th><th>Montant</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Aucune charge fixe.</div>'}`;
+}
+
+function renderComptes(){
+  const edit=editing.acc ? state.accounts.find(a=>a.id===editing.acc) : null;
+  const rows=state.accounts.map(a=>{const th=accountBalance(a.id),ba=accountBankBalance(a.id),pc=pendingBankCount(a.id);return `<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${esc(a.currency)}</td><td class="num">${money(a.initialBalance,a.currency)}</td><td>${fmtDate(a.createdDate)}</td><td class="num ${th>=0?'pos':'neg'}">${money(th,a.currency)}</td><td class="num ${ba>=0?'pos':'neg'}">${money(ba,a.currency)}</td><td>${pc?`${pc} en attente`:'À jour'}</td><td><button class="btn small ghost" data-action="edit-acc" data-id="${a.id}">Modifier</button> <button class="btn danger" data-action="del-acc" data-id="${a.id}">Supprimer</button></td></tr>`;}).join('');
+  return `<h1 class="page-title">Comptes</h1><p class="page-sub">Le solde théorique inclut toutes vos écritures. Le solde bancaire validé inclut uniquement les opérations confirmées.</p><form class="inline" id="form-acc"><input type="hidden" name="editId" value="${edit?.id||''}"><div class="field"><label>Nom du compte</label><input name="name" value="${esc(edit?.name||'')}" placeholder="Ex: Compte courant CHF" required></div><div class="field"><label>Type</label><select name="type">${['Courant','Épargne','Assurance vie','Autre'].map(x=>`<option ${edit?.type===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Devise</label><select name="currency"><option ${edit?.currency!=='EUR'?'selected':''}>CHF</option><option ${edit?.currency==='EUR'?'selected':''}>EUR</option></select></div><div class="field"><label>Solde initial</label><input type="number" name="initialBalance" step="0.01" value="${edit?.initialBalance??0}" required></div><div class="field"><label>Date de création</label><input type="date" name="createdDate" value="${edit?.createdDate||todayISO()}" required></div><div class="field"><button class="btn primary" type="submit">${edit?'Enregistrer les modifications':'Ajouter le compte'}</button>${edit?'<button class="btn ghost" type="button" data-action="cancel-edit-acc">Annuler</button>':''}</div></form><div class="rule"></div>${state.accounts.length?`<table><thead><tr><th>Compte</th><th>Type</th><th>Devise</th><th>Solde initial</th><th>Créé le</th><th>Solde théorique</th><th>Solde banque</th><th>Rapprochement</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Aucun compte.</div>'}`;
+}
+
+function renderCategories(){
+  const edit=editing.cat ? state.categories.find(c=>c.id===editing.cat) : null;
+  const rows=state.categories.map(c=>`<tr><td>${esc(c.name)}</td><td><span class="tag ${c.type}">${c.type}</span></td><td><button class="btn small ghost" data-action="edit-cat" data-id="${c.id}">Modifier</button> <button class="btn danger" data-action="del-cat" data-id="${c.id}">Supprimer</button></td></tr>`).join('');
+  return `<h1 class="page-title">Catégories</h1><p class="page-sub">Les catégories utilisées pour classer vos opérations.</p><form class="inline" id="form-cat"><input type="hidden" name="editId" value="${edit?.id||''}"><div class="field"><label>Nom</label><input name="name" value="${esc(edit?.name||'')}" placeholder="Ex: LOISIRS" required></div><div class="field"><label>Type</label><select name="type"><option value="FIXE" ${edit?.type==='FIXE'?'selected':''}>Fixe</option><option value="VARIABLE" ${edit?.type==='VARIABLE'?'selected':''}>Variable</option><option value="REVENU" ${edit?.type==='REVENU'?'selected':''}>Revenu</option></select></div><div class="field"><button class="btn primary" type="submit">${edit?'Enregistrer les modifications':'Ajouter la catégorie'}</button>${edit?'<button class="btn ghost" type="button" data-action="cancel-edit-cat">Annuler</button>':''}</div></form><div class="rule"></div>${state.categories.length?`<table><thead><tr><th>Nom</th><th>Type</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">Aucune catégorie.</div>'}`;
+}
+
+function renderBackup(){
+  return `<h1 class="page-title">Sauvegarde</h1><p class="page-sub">Vos données restent sur cet appareil. Faites régulièrement une sauvegarde pour pouvoir les restaurer en cas de changement de navigateur ou d'ordinateur.</p>
+  <div class="grid cols-2"><div class="card"><h3>Sauvegarde complète</h3><p class="muted">Tous les profils, leurs comptes actifs et supprimés, opérations, charges fixes, catégories et réglages.</p><div class="backup-actions"><button class="btn primary" data-action="backup-json">Sauvegarder tous les profils</button><button class="btn ghost" data-action="backup-current-profile">Sauvegarder le profil actuel</button><button class="btn ghost" data-action="restore-json">Restaurer une sauvegarde</button></div></div><div class="card"><h3>Export des opérations</h3><p class="muted">Fichier CSV lisible dans Excel.</p><div class="backup-actions"><button class="btn primary" data-action="export-csv">Exporter en CSV</button></div></div></div>
+  <div class="rule"></div><div class="card"><h3>Automatisation générale</h3><p class="muted">Vous pouvez suspendre temporairement toutes les écritures automatiques sans modifier chaque charge.</p><div class="backup-actions"><button class="btn ${state.settings.autoFixed?'ghost':'primary'}" data-action="toggle-global-auto">${state.settings.autoFixed?'Suspendre les automatismes':'Réactiver les automatismes'}</button></div><p class="muted" style="margin-top:10px;">État : <strong>${state.settings.autoFixed?'ACTIF':'SUSPENDU'}</strong></p></div>`;
+}
+
+function downloadText(filename,text,mime='text/plain'){
+  if(window.webkit?.messageHandlers?.grandLivreSave){
+    window.webkit.messageHandlers.grandLivreSave.postMessage({filename,text}); return;
+  }
+  const blob=new Blob([text],{type:mime}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function backupJSON(){
+  persistCurrentProfile(false);
+  const allProfiles={};
+  profiles.forEach(p=>{
+    try{ allProfiles[p.id]=JSON.parse(localStorage.getItem(PROFILE_PREFIX+p.id)||'{}'); }
+    catch(e){ allProfiles[p.id]={}; }
+  });
+  const payload={
+    app:'Grand-Livre',
+    format:'grand-livre-multiprofils',
+    version:DATA_VERSION,
+    exportedAt:new Date().toISOString(),
+    profiles,
+    activeProfileId,
+    profileData:allProfiles
+  };
+  downloadText(`grand-livre-tous-profils-${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json');
+  toast('Sauvegarde complète créée');
+}
+
+function backupCurrentProfile(){
+  persistCurrentProfile(false);
+  const payload={
+    app:'Grand-Livre',
+    format:'grand-livre-profil',
+    version:DATA_VERSION,
+    exportedAt:new Date().toISOString(),
+    profile:{...currentProfile()},
+    data:state
+  };
+  downloadText(`grand-livre-${(currentProfile()?.name||'profil').replace(/[^a-z0-9_-]+/gi,'-')}-${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json');
+  toast('Sauvegarde du profil créée');
+}
+function exportCSV(){
+  const rows=[['Date','Compte','Devise','Sens','Catégorie','Mode','Libellé','Montant','Automatique','Validée banque','Date validation banque','ID transfert','Rôle transfert']];
+  [...state.transactions].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const a=accountById(t.accountId),c=categoryById(t.categoryId);rows.push([t.date,(a?.name||'')+(a?.archived?' [compte supprimé]':''),a?.currency||'',t.sens,c?.name||'',t.mode||'',t.libelle||'',Number(t.montant)||0,t.automatique?'OUI':'NON',t.bankValidated?'OUI':'NON',t.bankValidatedDate||'',t.transferId||'',t.transferRole||'']);});
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  downloadText(`grand-livre-operations-${todayISO()}.csv`,csv,'text/csv;charset=utf-8'); toast('Export CSV créé');
+}
+
+// Un seul gestionnaire de submit pour toute la durée de vie de l'application.
+document.getElementById('content').addEventListener('submit',e=>{
+  e.preventDefault(); const form=e.target; const fd=new FormData(form);
+  if(form.id==='form-acc'){
+    const id=fd.get('editId');
+    const data={name:fd.get('name'),type:fd.get('type'),currency:String(fd.get('currency')||'CHF').toUpperCase(),initialBalance:Number.parseFloat(fd.get('initialBalance'))||0,createdDate:fd.get('createdDate')};
+    if(id){const a=state.accounts.find(x=>x.id===id); if(a)Object.assign(a,data); editing.acc=null;}
+    else state.accounts.push({id:uid(),...data});
+  } else if(form.id==='form-tx'){
+    const id=fd.get('editId');
+    const data={date:fd.get('date'),accountId:fd.get('accountId'),sens:fd.get('sens'),categoryId:fd.get('categoryId'),mode:fd.get('mode'),libelle:fd.get('libelle'),montant:Number.parseFloat(fd.get('montant'))||0};
+    if(id){const t=state.transactions.find(x=>x.id===id); if(t && !t.transferId)Object.assign(t,data); editing.tx=null;}
+    else state.transactions.push({id:uid(),...data,bankValidated:false,bankValidatedDate:'',transferId:'',transferRole:''});
+  } else if(form.id==='form-fixed'){
+    const id=fd.get('editId');
+    const data={label:fd.get('label'),accountId:fd.get('accountId'),sens:fd.get('sens'),categoryId:fd.get('categoryId'),mode:fd.get('mode'),frequence:fd.get('frequence'),jour:Number.parseInt(fd.get('jour'))||1,mois:Number.parseInt(fd.get('mois'))||1,montant:Number.parseFloat(fd.get('montant'))||0,automatique:fd.get('automatique')==='on'};
+    if(id){const f=state.fixedCharges.find(x=>x.id===id); if(f)Object.assign(f,data); editing.fixed=null;}
+    else state.fixedCharges.push({id:uid(),...data,createdDate:todayISO()});
+  } else if(form.id==='form-cat'){
+    const id=fd.get('editId'); const data={name:fd.get('name'),type:fd.get('type')};
+    if(id){const c=state.categories.find(x=>x.id===id); if(c)Object.assign(c,data); editing.cat=null;}
+    else state.categories.push({id:uid(),...data});
+  } else if(form.id==='form-transfer'){
+    const existingId=fd.get('transferId');
+    const sourceId=fd.get('sourceAccountId'), destId=fd.get('destAccountId');
+    if(!sourceId||!destId||sourceId===destId){toast('Choisissez deux comptes différents');return;}
+    const source=accountById(sourceId), dest=accountById(destId); if(!source||!dest)return;
+    const sourceAmount=Number.parseFloat(fd.get('sourceAmount'))||0; let destAmount=Number.parseFloat(fd.get('destAmount'))||0;
+    if(sourceAmount<=0){toast('Montant de transfert invalide');return;}
+    if(source.currency===dest.currency) destAmount=sourceAmount;
+    else if(destAmount<=0){toast('Indiquez le montant crédité pour un transfert entre devises différentes');return;}
+    const transferId=existingId||uid(), date=fd.get('date'), extra=String(fd.get('label')||'').trim();
+    const sourceLabel=`Transfert vers ${dest.name}${extra?' — '+extra:''}`;
+    const destLabel=`Transfert depuis ${source.name}${extra?' — '+extra:''}`;
+    if(existingId){
+      const src=state.transactions.find(t=>t.transferId===existingId&&t.transferRole==='SOURCE');
+      const dst=state.transactions.find(t=>t.transferId===existingId&&t.transferRole==='DEST');
+      if(src)Object.assign(src,{date,accountId:sourceId,sens:'DEBIT',categoryId:'',mode:'VIREMENT',libelle:sourceLabel,montant:sourceAmount});
+      if(dst)Object.assign(dst,{date,accountId:destId,sens:'CREDIT',categoryId:'',mode:'VIREMENT',libelle:destLabel,montant:destAmount});
+      editing.transfer=null;
+    } else {
+      const srcTxId=uid(), dstTxId=uid();
+      state.transactions.push({id:srcTxId,date,accountId:sourceId,sens:'DEBIT',categoryId:'',mode:'VIREMENT',libelle:sourceLabel,montant:sourceAmount,bankValidated:false,bankValidatedDate:'',transferId,transferRole:'SOURCE',linkedTransactionId:dstTxId});
+      state.transactions.push({id:dstTxId,date,accountId:destId,sens:'CREDIT',categoryId:'',mode:'VIREMENT',libelle:destLabel,montant:destAmount,bankValidated:false,bankValidatedDate:'',transferId,transferRole:'DEST',linkedTransactionId:srcTxId});
+    }
+  } else return;
+  save(); render();
+});
+
+// Un seul gestionnaire de clic : corrige définitivement l'accumulation d'écouteurs.
+document.getElementById('content').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-action]'); if(!btn)return;
+  const id=btn.dataset.id, action=btn.dataset.action;
+  if(action==='profile-add-mobile'){openProfileNameModal('add');return;}
+  if(action==='profile-rename-mobile'){openProfileNameModal('rename');return;}
+  if(action==='profile-delete-mobile'){deleteCurrentProfile();return;}
+  if(action==='edit-acc'){editing.acc=id;activeTab='comptes';render();return;}
+  if(action==='cancel-edit-acc'){editing.acc=null;render();return;}
+  if(action==='edit-tx'){editing.tx=id;activeTab='operations';render();return;}
+  if(action==='cancel-edit-tx'){editing.tx=null;render();return;}
+  if(action==='edit-fixed'){editing.fixed=id;activeTab='charges';render();return;}
+  if(action==='cancel-edit-fixed'){editing.fixed=null;render();return;}
+  if(action==='edit-cat'){editing.cat=id;activeTab='categories';render();return;}
+  if(action==='cancel-edit-cat'){editing.cat=null;render();return;}
+  if(action==='edit-transfer'){editing.transfer=id;activeTab='operations';render();return;}
+  if(action==='cancel-edit-transfer'){editing.transfer=null;render();return;}
+  if(action==='del-acc'){
+    const acc=state.accounts.find(a=>a.id===id);
+    if(!acc)return;
+    const txCount=state.transactions.filter(t=>t.accountId===id).length;
+    const fixedCount=state.fixedCharges.filter(f=>f.accountId===id).length;
+    const root=document.getElementById('profile-modal-root');
+    root.innerHTML=`<div class="profile-modal-overlay"><div class="profile-modal">
+      <h3>Supprimer le compte ?</h3>
+      <p style="color:var(--ink-soft);font-size:13px;line-height:1.45;margin:0 0 10px">
+        Le compte <strong>${esc(acc.name)}</strong> sera retiré de vos comptes actifs.
+      </p>
+      <p style="color:var(--ink-soft);font-size:12px;line-height:1.45;margin:0 0 14px">
+        ${txCount ? `${txCount} ancienne${txCount>1?'s':''} opération${txCount>1?'s':''} sera${txCount>1?'ont':''} conservée${txCount>1?'s':''} dans l’historique. ` : ''}
+        ${fixedCount ? `${fixedCount} charge${fixedCount>1?'s':''} fixe${fixedCount>1?'s':''} liée${fixedCount>1?'s':''} à ce compte sera${fixedCount>1?'ont':''} supprimée${fixedCount>1?'s':''}.` : ''}
+      </p>
+      <div class="profile-modal-actions">
+        <button class="btn ghost" id="account-delete-cancel">Annuler</button>
+        <button class="btn danger" id="account-delete-confirm">Supprimer le compte</button>
+      </div>
+    </div></div>`;
+    document.getElementById('account-delete-cancel').onclick=()=>root.innerHTML='';
+    document.getElementById('account-delete-confirm').onclick=()=>{
+      const archived={...acc,archived:true,archivedDate:todayISO()};
+      state.archivedAccounts=state.archivedAccounts.filter(a=>a.id!==id);
+      state.archivedAccounts.push(archived);
+      state.accounts=state.accounts.filter(a=>a.id!==id);
+      state.fixedCharges=state.fixedCharges.filter(f=>f.accountId!==id);
+      if(editing.acc===id)editing.acc=null;
+      root.innerHTML='';
+      save();render();toast('Compte supprimé — historique conservé');
+    };
+    return;
+  } else if(action==='del-tx') state.transactions=state.transactions.filter(t=>t.id!==id);
+  else if(action==='del-transfer'){
+    state.transactions=state.transactions.filter(t=>t.transferId!==id); if(editing.transfer===id)editing.transfer=null;
+  }
+  else if(action==='del-fixed') state.fixedCharges=state.fixedCharges.filter(f=>f.id!==id);
+  else if(action==='del-cat'){
+    const used=state.transactions.some(t=>t.categoryId===id)||state.fixedCharges.some(f=>f.categoryId===id);
+    if(used){toast('Catégorie utilisée : suppression impossible');return;}
+    state.categories=state.categories.filter(c=>c.id!==id);
+  } else if(action==='validate-bank'){ const t=state.transactions.find(x=>x.id===id); if(t){t.bankValidated=true;t.bankValidatedDate=todayISO();toast('Opération validée avec la banque');} }
+  else if(action==='unvalidate-bank'){ const t=state.transactions.find(x=>x.id===id); if(t){t.bankValidated=false;t.bankValidatedDate='';toast('Validation bancaire annulée');} }
+  else if(action==='toggle-auto'){ const f=state.fixedCharges.find(x=>x.id===id); if(f){f.automatique=!f.automatique; toast(f.automatique?'Automatisation activée':'Automatisation désactivée');} }
+  else if(action==='log-fixed'){ const f=state.fixedCharges.find(x=>x.id===id); if(f){if(!addFixedTransaction(f,todayISO(),false)){toast('Déjà enregistré pour cette période');return;} toast('Opération enregistrée');} }
+  else if(action==='backup-json'){backupJSON();return;}
+  else if(action==='backup-current-profile'){backupCurrentProfile();return;}
+  else if(action==='restore-json'){document.getElementById('restore-file').click();return;}
+  else if(action==='export-csv'){exportCSV();return;}
+  else if(action==='toggle-global-auto'){state.settings.autoFixed=!state.settings.autoFixed;}
+  else return;
+  save(); render();
+});
+
+
+document.getElementById('profile-select').addEventListener('change',e=>switchProfile(e.target.value));
+document.getElementById('profile-add').addEventListener('click',()=>openProfileNameModal('add'));
+document.getElementById('profile-rename').addEventListener('click',()=>openProfileNameModal('rename'));
+document.getElementById('profile-delete').addEventListener('click',deleteCurrentProfile);
+
+document.getElementById('content').addEventListener('change',e=>{
+  if(e.target.id==='profile-mobile-select'){ switchProfile(e.target.value); }
+});
+
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button[data-tab]');if(!b)return;activeTab=b.dataset.tab;render();});
+
+document.getElementById('restore-file').addEventListener('change',e=>{
+  const file=e.target.files?.[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      if(!window.confirm('Restaurer cette sauvegarde remplacera les données concernées. Continuer ?')){
+        e.target.value=''; return;
+      }
+
+      if(parsed.format==='grand-livre-multiprofils' && Array.isArray(parsed.profiles) && parsed.profileData){
+        // Remplacement complet de tous les profils
+        profiles.forEach(p=>localStorage.removeItem(PROFILE_PREFIX+p.id));
+        profiles=parsed.profiles;
+        activeProfileId=parsed.activeProfileId && profiles.some(p=>p.id===parsed.activeProfileId) ? parsed.activeProfileId : profiles[0].id;
+        profiles.forEach(p=>{
+          const d=normalizeState(parsed.profileData[p.id]||{categories:defaultCategories()});
+          localStorage.setItem(PROFILE_PREFIX+p.id,JSON.stringify(d));
+        });
+        saveProfilesMeta();
+        loadActiveProfile();
+      }else if(parsed.format==='grand-livre-profil' && parsed.data){
+        // Restaure dans le profil actuel
+        state=normalizeState(parsed.data);
+        persistCurrentProfile(false);
+      }else{
+        // Compatibilité avec les anciennes sauvegardes mono-profil
+        const data=parsed.data||parsed;
+        state=normalizeState(data);
+        persistCurrentProfile(false);
+      }
+
+      processDueFixedCharges();
+      persistCurrentProfile(false);
+      refreshProfileSelectors();
+      render();
+      toast('Sauvegarde restaurée');
+    }catch(err){
+      console.error(err);
+      toast('Fichier de sauvegarde invalide');
+    }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+});
+
+function resumeAutomation(){ const n=processDueFixedCharges(); if(n){persistNow(false);render();toast(`${n} écriture${n>1?'s':''} automatique${n>1?'s':''} ajoutée${n>1?'s':''}`);} }
+window.addEventListener('focus',resumeAutomation);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeAutomation();});
+setInterval(resumeAutomation,60*60*1000);
+
+load();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+}
+</script>
+
+</body>
+</html>
