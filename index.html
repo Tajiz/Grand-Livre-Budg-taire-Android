@@ -40,6 +40,9 @@
     transition:all .15s ease;
   }
   nav.tabs button:hover{color:var(--ink);background:rgba(168,121,31,0.07);}
+  /* Galaxy/Android: le texte des onglets est directement dans le bouton et reste toujours visible */
+  nav.tabs button{display:block !important;visibility:visible !important;opacity:1 !important;color:var(--ink-soft) !important;-webkit-text-fill-color:var(--ink-soft) !important;}
+  nav.tabs button.active{color:var(--ink) !important;-webkit-text-fill-color:var(--ink) !important;}
   nav.tabs button.active{
     color:var(--ink);background:var(--card);border-left:3px solid var(--brass);
     font-weight:600;
@@ -52,7 +55,7 @@
   .grid{display:grid;gap:16px;}
   .grid.cols-2{grid-template-columns:1fr 1fr;}
   .grid.cols-3{grid-template-columns:repeat(3,1fr);}
-  @media(max-width:860px){.grid.cols-2,.grid.cols-3{grid-template-columns:1fr;} main{padding:24px;} nav.tabs{width:64px;} nav.tabs .brand,nav.tabs button span.label{display:none;}}
+  @media(max-width:860px){.grid.cols-2,.grid.cols-3{grid-template-columns:1fr;} main{padding:24px;} nav.tabs{width:64px;} nav.tabs .brand{display:none;}}
 
   .card{
     background:var(--card);border:1px solid var(--paper-line);border-radius:3px;
@@ -141,7 +144,7 @@
   nav.tabs{width:190px}
   /* Rétablit les libellés masqués par la règle <= 860 px sur tablette */
   nav.tabs .brand{display:block}
-  nav.tabs button span.label{display:inline}
+  
   nav.tabs button{padding:11px 14px 11px 18px;text-align:left}
   main{padding:24px 20px 50px;max-width:none}
   .grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -162,7 +165,10 @@
     background:rgba(239,235,225,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)
   }
   nav.tabs .brand,.profile-box{display:none}
-  nav.tabs button{flex:1;padding:7px 2px;border-left:0;border-top:3px solid transparent;text-align:center;font-size:9.5px;display:flex;align-items:center;justify-content:center}
+  /* IMPORTANT : la règle générale <= 860 px masque les libellés.
+     Sur téléphone/petite tablette on les réaffiche explicitement. */
+  
+  nav.tabs button{flex:1;padding:7px 2px;border-left:0;border-top:3px solid transparent;text-align:center;font-size:9px;display:flex;align-items:center;justify-content:center;white-space:normal;line-height:1.15}
   nav.tabs button.active{border-left:0;border-top:3px solid var(--ink)}
   main{padding:18px 10px 92px;max-width:none;overflow-x:hidden}
   .page-title{font-size:22px}
@@ -208,12 +214,12 @@
       </div>
     </div>
 
-    <button data-tab="dashboard"><span class="label">Tableau de bord</span></button>
-    <button data-tab="operations"><span class="label">Opérations</span></button>
-    <button data-tab="charges"><span class="label">Charges fixes</span></button>
-    <button data-tab="comptes"><span class="label">Comptes</span></button>
-    <button data-tab="categories"><span class="label">Catégories</span></button>
-    <button data-tab="backup"><span class="label">Sauvegarde</span></button>
+    <button data-tab="dashboard">Tableau de bord</button>
+    <button data-tab="operations">Opérations</button>
+    <button data-tab="charges">Charges fixes</button>
+    <button data-tab="comptes">Comptes</button>
+    <button data-tab="categories">Catégories</button>
+    <button data-tab="backup">Sauvegarde</button>
   </nav>
   <main id="content"></main>
 </div>
